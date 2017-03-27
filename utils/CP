@@ -1,0 +1,42 @@
+#!/bin/bash
+
+${HADOOP_HOME?"HADOOP_HOME not initialized. Check .bashrc file"} 2>/dev/null
+
+echo -n "Copy $1 to "
+cat ${HADOOP_HOME}/etc/hadoop/slaves | grep -v ^# | xargs -i echo -n "{}, "
+echo ""
+
+user=`whoami`
+
+for userhost in `cat ${HADOOP_HOME}/etc/hadoop/slaves | grep -v ^# `
+do
+    fields=`echo $userhost | awk -F '@' '{print NF }'`
+    runcmd=true
+
+    if [ $fields -eq 2 ]; then
+        in_user=`echo $userhost | awk -F '@' '{print $1}'`
+        in_host=`echo $userhost | awk -F '@' '{print $2}'`
+        if [ $user == $in_user ]; then
+                for hostalias in `hostname -A`
+                do
+                    if [ $hostalias == $in_host ]; then
+                        runcmd=false
+                        break
+                    fi
+                done
+        fi
+    else
+        in_host=`echo $userhost `
+        for hostalias in `hostname -A`
+        do
+            if [ $hostalias == $in_host ]; then
+                runcmd=false
+                break
+            fi
+        done
+    fi
+
+    if [ $runcmd == true ]; then
+        scp $1 $userhost:$2
+    fi
+done

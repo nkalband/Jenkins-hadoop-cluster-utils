@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.TextParameterDefinition>
+          <name>MASTER_HOSTNAME</name>
+          <description>Please enter hostname or IP of master machine where cluster to be setup</description>
+          <defaultValue>9.3.126.18</defaultValue>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>SLAVE_HOSTNAMES</name>
+          <description>Please enter hostnames or IP for desired slaves in format slave_hostname1,slave_hostname2</description>
+          <defaultValue>9.3.126.245,9.3.126.18</defaultValue>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>SPARK_VERSION</name>
+          <description>Spark version you want for building cluster. Default is 2.0.1</description>
+          <defaultValue>2.0.1</defaultValue>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>HADOOP_VERSION</name>
+          <description>Hadoop version you want for building cluster. Default is 2.7.1</description>
+          <defaultValue>2.7.1</defaultValue>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>FLAG_HIVE_MYSQL</name>
+          <description>Flag to be set if you want mysql and hive setup with this hadoop and spark setup. Please select Y/N.
+This is required to run spark benchmarks like Hibech and sparkbench</description>
+          <defaultValue>N</defaultValue>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>HDFS_FORMAT</name>
+          <description>If HDFS directories already existing. Do you wish to format - Y/N</description>
+          <defaultValue>Y</defaultValue>
+        </hudson.model.TextParameterDefinition>
+        <hudson.model.TextParameterDefinition>
+          <name>SPARK_TEST</name>
+          <description>Do you wish to run pi example for testing spark setup - Y/N</description>
+          <defaultValue>Y</defaultValue>
+        </hudson.model.TextParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>WORKDIR=ssh testuser@$MASTER_HOSTNAME &quot;pwd&quot;
+ssh testuser@$MASTER_HOSTNAME /bin/bash &lt;&lt;EOT
+echo &apos;Clonig repo Jenkins-hadoop-cluster-utils at location &apos;$WORKDIR&apos;&apos;
+git clone https://github.com/nkalband/Jenkins-hadoop-cluster-utils.git
+EOT
+
+echo &quot;Running autogen.sh&quot;
+ssh testuser@$MASTER_HOSTNAME /bin/bash &lt;&lt;EOT
+cd Jenkins-hadoop-cluster-utils
+./autogen.sh $SLAVE_HOSTNAMES $SPARK_VERSION $HADOOP_VERSION $FLAG_HIVE_MYSQL
+EOT
+
+echo &quot;Running Setup.sh&quot;
+ssh -t testuser@$MASTER_HOSTNAME /bin/bash &lt;&lt;EOT
+cd Jenkins-hadoop-cluster-utils
+./setup.sh $HDFS_FORMAT $SPARK_TEST
+EOT
+
+
+</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

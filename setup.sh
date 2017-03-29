@@ -4,9 +4,6 @@
 # Need to set JAVA_HOME in .bashrc files on all machines
 # Need to complete ssh setup for all servers
 
-ul=`tput smul`
-nul=`tput rmul`
-
 CURDIR=`pwd`            # Inside hadoop-cluster-utils directory where run.sh is exist
 WORKDIR=${HOME}         # where hadoop and spark package will download 
 
@@ -176,7 +173,7 @@ then
 
     
     ## Validation for Slaves hostnames/IPs
-    echo -e "${ul}Validation for slave Hostnames${nul}" | tee -a $log
+    echo -e "Validation for slave Hostnames" | tee -a $log
     while IFS= read -r host; do
          if ping -q -c2 "$host" &>/dev/null;
          then
@@ -192,7 +189,7 @@ then
     ## Download hadoop on Master machine 
   
     echo "---------------------------------------------" | tee -a $log
-    echo "${ul}Downloading and installing hadoop...${nul}" | tee -a $log
+    echo "Downloading and installing hadoop..." | tee -a $log
 	echo -e | tee -a $log
     cd ${WORKDIR}
     if [ ! -f ${WORKDIR}/hadoop-${hadoopver}.tar.gz ];
@@ -516,10 +513,11 @@ if [ $RMDIR == 1 ]; then
   echo 'Formatting NAMENODE'| tee -a $log
   $HADOOP_PREFIX/bin/hdfs namenode -format mycluster >> $log 2>&1
 else
-  read -p "** NOTE ** HDFS directories existing. Do you wish to format ? [y/N] " prmpt
-  if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]; then
+  #read -p "** NOTE ** HDFS directories existing. Do you wish to format ? [y/N] " prompt
+  hdfs_format=$1
+  if [[ $hdfs_format == "y" || $hdfs_format == "Y" || $hdfs_format == "yes" || $hdfs_format == "Yes" ]]; then
     echo 'Formatting NAMENODE'| tee -a $log
-    $HADOOP_PREFIX/bin/hdfs namenode -format mycluster >> $log 2>&1
+    $HADOOP_PREFIX/bin/hdfs namenode -format -force mycluster >> $log 2>&1
   fi
 fi
 
@@ -723,10 +721,10 @@ echo "${ul}Ensure SPARK running correctly using following command${nul}" | tee -
 echo "${SPARK_HOME}/bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn-client --driver-memory 1024M --num-executors 2 --executor-memory 1g  --executor-cores 1 ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.0.1.jar 10" | tee -a $log
 echo -e 
 
-read -p "Do you wish to run above command ? [y/N] " prompt
+#read -p "Do you wish to run above command ? [y/N] " prompt
 
-
-if [[ $prompt == "y" || $prompt == "Y" || $prompt == "yes" || $prompt == "Yes" ]]
+spark_test=$2
+if [[ $spark_test == "y" || $spark_test == "Y" || $spark_test == "yes" || $spark_test == "Yes" ]]
 then
   ${SPARK_HOME}/bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn-client --driver-memory 1024M --num-executors 2 --executor-memory 1g  --executor-cores 1 ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.0.1.jar 10 &>> $log
   

@@ -12,8 +12,8 @@ echo -en '# Master Details\n' >> config
 MASTER=`hostname`
 echo -en 'MASTER='$MASTER'\n\n' >> config
 
-echo -en 'Please enter slave hostname details in format slave1_hostname,slave2_hostname \n'
-read SLAVE_HOSTNAME
+#echo -en 'Please enter slave hostname details in format slave1_hostname,slave2_hostname \n'
+SLAVE_HOSTNAME=$1
 
 echo -en '# Using these format to save SLAVE Details: slave1IP,slave1cpu,slave1memory....\n' >> config
 echo -e
@@ -41,10 +41,12 @@ echo -en '#Node Manager properties (Default yarn cpu and memory value for all no
 echo -en 'YARN_SCHEDULER_MIN_ALLOCATION_MB=128\n' >> config				 
 echo -en 'YARN_SCHEDULER_MIN_ALLOCATION_VCORES=1\n\n' >> config
 echo -e
-echo -en 'Default Spark version : 2.0.1\n'
-sparkver="2.0.1"
-echo -en 'Default hadoop version : 2.7.1\n'	
-hadoopver="2.7.1"
+echo -en 'Spark version selected for setup : '$2''
+#sparkver="2.0.1"
+sparkver=$2
+echo -en 'hadoop version selected for setup :'$3''	
+#hadoopver="2.7.1"
+hadoopver=$3
 
 echo -en '#Hadoop and Spark versions and setup zip download urls\n' >> config
 echo -e
@@ -85,9 +87,10 @@ echo -en 'SPARKHISTORY_HTTP_ADDRESS=18080\n\n' >> config
 
 ##setting flag to setup hive and mysql or not
 echo -e "#Flag set for hive and mysql set up required or not" >> config
-echo -e 'Do you want to setup hive and mysql. This will be required for running benchmarks like TPCDS and HiBench'
-read -p "Please confirm ? [y/N] " prompt
-if [[ $prompt == "y" || $prompt == "Y" ]]
+#echo -e 'Do you want to setup hive and mysql. This will be required for running benchmarks like TPCDS and HiBench'
+#read -p "Please confirm ? [y/N] " prompt
+flag_hive_mysql=$5
+if [[ $flag_hive_mysql == "y" || $flag_hive_mysql == "Y" ]]
 then
     echo -e 'SETUP_HIVE_MYSQL=Yes' >> config
 else 

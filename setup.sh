@@ -1,4 +1,4 @@
-#!/bin/bash -l
+			#!/bin/bash -l
 
 # Need to create user manually
 # Need to set JAVA_HOME in .bashrc files on all machines
@@ -360,21 +360,30 @@ export PATH=$HADOOP_HOME/bin:$PATH
 
 ##Spark installation
 
-echo -e "${ul}Downloading and installing Spark...${nul}\n" | tee -a $log
+echo -e "${ul}Downloading and installing Spark...${nul}\n" | tee -a $log 
 
 cd ${WORKDIR}
 
-if [ ! -f ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz ];
+# if [ ! -f ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz ];
+# then
+    # if curl --output /dev/null --silent --head --fail $SPARK_URL
+    # then
+	    # echo 'SPARK file Downloading on Master - '$MASTER'' | tee -a $log
+        # wget $SPARK_URL | tee -a $log
+    # else 
+        # echo "This URL Not Exist. Please check your spark version then continue to run this script." | tee -a $log
+        # exit 1
+    # fi 
+# echo "***********************************************"
+# fi
+
+SPARK_DIR=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}' | cut -c1-38` 2>>/dev/null
+SPARK_FILE=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
+if [ $? -ne 0  ];
 then
-    if curl --output /dev/null --silent --head --fail $SPARK_URL
-    then
-	    echo 'SPARK file Downloading on Master - '$MASTER'' | tee -a $log
-        wget $SPARK_URL | tee -a $log
-    else 
-        echo "This URL Not Exist. Please check your spark version then continue to run this script." | tee -a $log
-        exit 1
-    fi 
-echo "***********************************************"
+    echo "Spark tgz file does not exist. Please rerun the spark validation job to generate again." | tee -a $log
+    exit 1
+   echo "***********************************************"
 fi
 
 ## Exporting SPARK_HOME to the PATH and Add scripts to the PATH
@@ -384,23 +393,24 @@ do
 
     if [ $i != $MASTER ]
 	then
-	    echo 'Copying Spark setup file on '$i'' | tee -a $log
-	    scp ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz @$i:${WORKDIR} | tee -a $log
+	    echo 'Deleting old spark file on machined and copying new Spark setup file on '$i'' | tee -a $log
+		ssh $i "rm ${WORKDIR}/${SPARK_FILE}" &>>/dev/null
+	    scp ${WORKDIR}/${SPARK_FILE} @$i:${WORKDIR} | tee -a $log
 	fi
 	
-	ssh $i '[ -d '${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}' ]' &>>/dev/null
+	ssh $i '[ -d '${WORKDIR}/${SPARK_DIR}' ]' &>>/dev/null
 	if [ $? -eq 0 ]
 		then 
-		echo 'Deleting existing spark folder "'spark-${sparkver}-bin-hadoop${hadoopver:0:3}'"  from '$i' '| tee -a $log
-		ssh $i "rm -rf ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}" &>>/dev/null
+		echo 'Deleting existing spark folder '$SPARK_DIR'  from '$i' '| tee -a $log
+		ssh $i "rm -rf ${WORKDIR}/${SPARK_DIR}" &>>/dev/null
 	fi
 	
 	echo 'Unzipping Spark setup file on '$i'' | tee -a $log
-    ssh $i "tar xf spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz --gzip" | tee -a $log	
+    ssh $i "tar xf ${SPARK_FILE} --gzip" | tee -a $log	
 	
 	echo 'Updating .bashrc file on '$i' with Spark variables '	
 	echo '#StartSparkEnv' >tmp_b
-	echo "export SPARK_HOME="${WORKDIR}"/spark-"${sparkver}"-bin-hadoop"${hadoopver:0:3}"" >>tmp_b
+	echo "export SPARK_HOME="${WORKDIR}"/${SPARK_DIR}" >>tmp_b
 	echo "export PATH=\$SPARK_HOME/bin:\$PATH">>tmp_b
 	echo '#StopSparkEnv'>>tmp_b
 		
@@ -423,7 +433,7 @@ done
 rm -rf tmp_b
 
 ##Exporting spark variables for current script session on master
-export SPARK_HOME=${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}
+export SPARK_HOME=${WORKDIR}/${SPARK_DIR}
 export PATH=$SPARK_HOME/bin:$PATH
 
 

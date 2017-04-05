@@ -41,23 +41,28 @@ echo -en '#Node Manager properties (Default yarn cpu and memory value for all no
 echo -en 'YARN_SCHEDULER_MIN_ALLOCATION_MB=128\n' >> config				 
 echo -en 'YARN_SCHEDULER_MIN_ALLOCATION_VCORES=1\n\n' >> config
 echo -e
-echo -en 'Spark version selected for setup : '$2''
+#echo -en 'Spark version selected for setup : '$2''
 #sparkver="2.0.1"
-sparkver=$2
-echo -en 'hadoop version selected for setup :'$3''	
+#sparkver=$2
+echo -en 'hadoop version selected for setup :'$2''	
 #hadoopver="2.7.1"
-hadoopver=$3
+hadoopver=$2
 
-echo -en '#Hadoop and Spark versions and setup zip download urls\n' >> config
+#echo -en '#Hadoop and Spark versions and setup zip download urls\n' >> config
+echo -en '#Hadoop versions and setup zip download urls\n' >> config
 echo -e
-echo -en 'sparkver='"$sparkver"'\n' >> config
+#echo -en 'sparkver='"$sparkver"'\n' >> config
 echo -en 'hadoopver='"$hadoopver"'\n\n' >> config
 
 HADOOP_URL="http://www-us.apache.org/dist/hadoop/common/hadoop-${hadoopver}/hadoop-${hadoopver}.tar.gz"
-SPARK_URL="http://www-us.apache.org/dist/spark/spark-${sparkver}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz"
-
-echo -en 'SPARK_URL='$SPARK_URL'\n' >> config
 echo -en 'HADOOP_URL='$HADOOP_URL'\n\n' >> config
+
+# SPARK_URL="http://www-us.apache.org/dist/spark/spark-${sparkver}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz"
+#echo -en 'SPARK_URL='$SPARK_URL'\n' >> config
+
+#Spark file used for setup
+SPARK_FILE=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
+echo 'spark file used for building spark cluster - '$SPARK_FILE'' >> config
 
 
 echo -en '# Default port values\n' >> config

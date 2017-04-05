@@ -377,7 +377,7 @@ cd ${WORKDIR}
 # echo "***********************************************"
 # fi
 
-SPARK_DIR=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}' | cut -c1-38` 2>>/dev/null
+SPARK_DIR=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}' | cut -c1-35` 2>>/dev/null
 SPARK_FILE=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
 if [ $? -ne 0  ];
 then
@@ -393,7 +393,7 @@ do
 
     if [ $i != $MASTER ]
 	then
-	    echo 'Deleting old spark file on machined and copying new Spark setup file on '$i'' | tee -a $log
+	    echo 'Deleting old spark file and copying new Spark setup file on '$i'' | tee -a $log
 		ssh $i "rm ${WORKDIR}/${SPARK_FILE}" &>>/dev/null
 	    scp ${WORKDIR}/${SPARK_FILE} @$i:${WORKDIR} | tee -a $log
 	fi
@@ -441,9 +441,9 @@ export PATH=$SPARK_HOME/bin:$PATH
 source ${HOME}/.bashrc
 echo 'Updating Slave file for Spark setup'| tee -a $log
 
-cp spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves.template spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves
-sed -i 's|localhost||g' spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves
-cat ${CURDIR}/conf/slaves>>spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves
+cp ${SPARK_DIR}/conf/slaves.template ${SPARK_DIR}/conf/slaves
+sed -i 's|localhost||g' ${SPARK_DIR}/conf/slaves
+cat ${CURDIR}/conf/slaves>>${SPARK_DIR}/conf/slaves
 
 echo -e "Configuring Spark history server" | tee -a $log
 
@@ -482,56 +482,26 @@ CP ${HADOOP_HOME}/etc/hadoop/log4j.properties ${HADOOP_HOME}/etc/hadoop &>/dev/n
 
 ##to start hadoop setup
 
-#
-# Check whether the list of directories exist.
-#   even if one directory got missed out, delete & recreate all directories and do hdfs format.
-#   even all directories exist, prompt whether to initiate hdfs format.
-#
-RMDIR=0
 for slave in `echo $SERVERS  |cut -d "=" -f2 | tr "%" "\n" | cut -d "," -f1 `
 do
-for dr in $HADOOP_TMP_DIR $NAMENODE_DIR $DATANODE_DIR
-do
-  splitdir=$(echo $dr | tr "," "\n")
-  for idr in $splitdir
-  do
-    ssh $slave "ls -ld $idr >/dev/null 2>&1"
-    if [ $? -ne 0 ]; then
-      RMDIR=1
-    fi
-  done
+	for dr in $HADOOP_TMP_DIR $NAMENODE_DIR $DATANODE_DIR
+	do
+		splitdir=$(echo $dr | tr "," "\n")
+		for idr in $splitdir
+		do
+		  ssh $slave "ls -ld $idr >/dev/null 2>&1"
+		  if [ $? -eq 0 ]; then
+			ssh $slave "rm -rf $idr" 
+		  fi
+		  ssh $slave "mkdir -p $idr"
+		done
+   done 
 done
-done
-
-if [ $RMDIR == 1 ]; then
-  for slave in `echo $SERVERS  |cut -d "=" -f2 | tr "%" "\n" | cut -d "," -f1 `
-  do
-  for dr in $HADOOP_TMP_DIR $NAMENODE_DIR $DATANODE_DIR
-  do
-    splitdir=$(echo $dr | tr "," "\n")
-    for idr in $splitdir
-    do
-      ssh $slave "ls -ld $idr >/dev/null 2>&1"
-      if [ $? -eq 0 ]; then
-        ssh $slave "rm -rf $idr" 
-      fi
-      ssh $slave "mkdir -p $idr"
-    done
-  done
-  done 
   echo "Finished creating HDFS directories" | tee -a $log
   echo 'Formatting NAMENODE'| tee -a $log
   $HADOOP_PREFIX/bin/hdfs namenode -format mycluster >> $log 2>&1
-else
-  #read -p "** NOTE ** HDFS directories existing. Do you wish to format ? [y/N] " prompt
-  hdfs_format=$1
-  if [[ $hdfs_format == "y" || $hdfs_format == "Y" || $hdfs_format == "yes" || $hdfs_format == "Yes" ]]; then
-    echo 'Formatting NAMENODE'| tee -a $log
-    $HADOOP_PREFIX/bin/hdfs namenode -format -force mycluster >> $log 2>&1
-  fi
-fi
 
-AN "mkdir -p '${HOME}'/hdfs_dir/spark-events" &>/dev/null
+  AN "mkdir -p '${HOME}'/hdfs_dir/spark-events" &>/dev/null
 
 echo -e | tee -a $log
 $CURDIR/hadoop/start-all.sh | tee -a $log
@@ -733,10 +703,10 @@ echo -e
 
 #read -p "Do you wish to run above command ? [y/N] " prompt
 
-spark_test=$2
+spark_test=$1
 if [[ $spark_test == "y" || $spark_test == "Y" || $spark_test == "yes" || $spark_test == "Yes" ]]
 then
-  ${SPARK_HOME}/bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn-client --driver-memory 1024M --num-executors 2 --executor-memory 1g  --executor-cores 1 ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.0.1.jar 10 &>> $log
+  ${SPARK_HOME}/bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn-client --driver-memory 1024M --num-executors 2 --executor-memory 1g  --executor-cores 1 ${SPARK_HOME}/examples/jars/spark-examples_2.11-*-SNAPSHOT.jar 10 &>> $log
   
   echo -e | tee -a $log
   echo "---------------------------------------------" | tee -a $log	

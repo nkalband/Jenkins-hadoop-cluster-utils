@@ -61,7 +61,7 @@ echo -en 'HADOOP_URL='$HADOOP_URL'\n\n' >> config
 #echo -en 'SPARK_URL='$SPARK_URL'\n' >> config
 
 #Spark file used for setup
-SPARK_FILE=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
+SPARK_FILE=`ls -ltr ${HOME}/spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
 echo 'spark file used for building spark cluster - '$SPARK_FILE'' >> config
 
 
@@ -103,8 +103,8 @@ else
 fi
 
 echo -e
-echo -e 'Please check configuration (config file) once before run (setup.sh file).'
-echo -e 'You can modify hadoop or spark versions in config file'
+#echo -e 'Please check configuration (config file) once before run (setup.sh file).'
+#echo -e 'You can modify hadoop or spark versions in config file'
 echo -e
 chmod +x config
 

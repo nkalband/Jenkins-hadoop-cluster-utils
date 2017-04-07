@@ -4,7 +4,7 @@
 # Creating new config
 echo -e '# Default hdfs configuration properties' > config
 echo -e 'HADOOP_TMP_DIR='${HOME}'/hdfs_dir/app-hadoop' >> config 
-echo -e 'REPLICATION_VALUE=3' >> config
+#echo -e 'REPLICATION_VALUE=3' >> config
 echo -e 'NAMENODE_DIR='${HOME}'/hdfs_dir/hdfs-meta' >> config
 echo -e 'DATANODE_DIR='${HOME}'/hdfs_dir/hdfs-data' >> config
 
@@ -34,6 +34,19 @@ SLAVE=`echo ''$SLAVE'%'$slavehost','$ncpu','$memorypercent''`
 fi
 ((j=j+1))
 done
+
+if [ $j -eq 1 ]
+then
+	echo -e 'REPLICATION_VALUE=1' >> config
+elif [ $j -eq 2 ]
+then
+	echo -e 'REPLICATION_VALUE=1' >> config
+elif [ $j -eq 3 ]
+then
+	echo -e 'REPLICATION_VALUE=2' >> config
+else 
+	echo -e 'REPLICATION_VALUE=3' >> config
+fi
 
 echo -en 'SLAVES='$SLAVE'\n\n' >> config
 

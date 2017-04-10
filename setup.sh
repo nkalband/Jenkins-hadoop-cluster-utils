@@ -1,4 +1,4 @@
-#!/bin/bash -l
+			#!/bin/bash -l
 
 # Need to create user manually
 # Need to set JAVA_HOME in .bashrc files on all machines
@@ -360,21 +360,30 @@ export PATH=$HADOOP_HOME/bin:$PATH
 
 ##Spark installation
 
-echo -e "${ul}Downloading and installing Spark...${nul}\n" | tee -a $log
+echo -e "${ul}Downloading and installing Spark...${nul}\n" | tee -a $log 
 
 cd ${WORKDIR}
 
-if [ ! -f ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz ];
+# if [ ! -f ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz ];
+# then
+    # if curl --output /dev/null --silent --head --fail $SPARK_URL
+    # then
+	    # echo 'SPARK file Downloading on Master - '$MASTER'' | tee -a $log
+        # wget $SPARK_URL | tee -a $log
+    # else 
+        # echo "This URL Not Exist. Please check your spark version then continue to run this script." | tee -a $log
+        # exit 1
+    # fi 
+# echo "***********************************************"
+# fi
+
+SPARK_DIR=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}' | cut -c1-35` 2>>/dev/null
+SPARK_FILE=`ls -ltr spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
+if [ $? -ne 0  ];
 then
-    if curl --output /dev/null --silent --head --fail $SPARK_URL
-    then
-	    echo 'SPARK file Downloading on Master - '$MASTER'' | tee -a $log
-        wget $SPARK_URL | tee -a $log
-    else 
-        echo "This URL Not Exist. Please check your spark version then continue to run this script." | tee -a $log
-        exit 1
-    fi 
-echo "***********************************************"
+    echo "Spark tgz file does not exist. Please rerun the spark validation job to generate again." | tee -a $log
+    exit 1
+   echo "***********************************************"
 fi
 
 ## Exporting SPARK_HOME to the PATH and Add scripts to the PATH
@@ -384,23 +393,24 @@ do
 
     if [ $i != $MASTER ]
 	then
-	    echo 'Copying Spark setup file on '$i'' | tee -a $log
-	    scp ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz @$i:${WORKDIR} | tee -a $log
+	    echo 'Deleting old spark file and copying new Spark setup file on '$i'' | tee -a $log
+		ssh $i "rm ${WORKDIR}/${SPARK_FILE}" &>>/dev/null
+	    scp ${WORKDIR}/${SPARK_FILE} @$i:${WORKDIR} | tee -a $log
 	fi
 	
-	ssh $i '[ -d '${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}' ]' &>>/dev/null
+	ssh $i '[ -d '${WORKDIR}/${SPARK_DIR}' ]' &>>/dev/null
 	if [ $? -eq 0 ]
 		then 
-		echo 'Deleting existing spark folder "'spark-${sparkver}-bin-hadoop${hadoopver:0:3}'"  from '$i' '| tee -a $log
-		ssh $i "rm -rf ${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}" &>>/dev/null
+		echo 'Deleting existing spark folder '$SPARK_DIR'  from '$i' '| tee -a $log
+		ssh $i "rm -rf ${WORKDIR}/${SPARK_DIR}" &>>/dev/null
 	fi
 	
 	echo 'Unzipping Spark setup file on '$i'' | tee -a $log
-    ssh $i "tar xf spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz --gzip" | tee -a $log	
+    ssh $i "tar xf ${SPARK_FILE} --gzip" | tee -a $log	
 	
 	echo 'Updating .bashrc file on '$i' with Spark variables '	
 	echo '#StartSparkEnv' >tmp_b
-	echo "export SPARK_HOME="${WORKDIR}"/spark-"${sparkver}"-bin-hadoop"${hadoopver:0:3}"" >>tmp_b
+	echo "export SPARK_HOME="${WORKDIR}"/${SPARK_DIR}" >>tmp_b
 	echo "export PATH=\$SPARK_HOME/bin:\$PATH">>tmp_b
 	echo '#StopSparkEnv'>>tmp_b
 		
@@ -423,7 +433,7 @@ done
 rm -rf tmp_b
 
 ##Exporting spark variables for current script session on master
-export SPARK_HOME=${WORKDIR}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}
+export SPARK_HOME=${WORKDIR}/${SPARK_DIR}
 export PATH=$SPARK_HOME/bin:$PATH
 
 
@@ -431,9 +441,9 @@ export PATH=$SPARK_HOME/bin:$PATH
 source ${HOME}/.bashrc
 echo 'Updating Slave file for Spark setup'| tee -a $log
 
-cp spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves.template spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves
-sed -i 's|localhost||g' spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves
-cat ${CURDIR}/conf/slaves>>spark-${sparkver}-bin-hadoop${hadoopver:0:3}/conf/slaves
+cp ${SPARK_DIR}/conf/slaves.template ${SPARK_DIR}/conf/slaves
+sed -i 's|localhost||g' ${SPARK_DIR}/conf/slaves
+cat ${CURDIR}/conf/slaves>>${SPARK_DIR}/conf/slaves
 
 echo -e "Configuring Spark history server" | tee -a $log
 
@@ -472,56 +482,26 @@ CP ${HADOOP_HOME}/etc/hadoop/log4j.properties ${HADOOP_HOME}/etc/hadoop &>/dev/n
 
 ##to start hadoop setup
 
-#
-# Check whether the list of directories exist.
-#   even if one directory got missed out, delete & recreate all directories and do hdfs format.
-#   even all directories exist, prompt whether to initiate hdfs format.
-#
-RMDIR=0
 for slave in `echo $SERVERS  |cut -d "=" -f2 | tr "%" "\n" | cut -d "," -f1 `
 do
-for dr in $HADOOP_TMP_DIR $NAMENODE_DIR $DATANODE_DIR
-do
-  splitdir=$(echo $dr | tr "," "\n")
-  for idr in $splitdir
-  do
-    ssh $slave "ls -ld $idr >/dev/null 2>&1"
-    if [ $? -ne 0 ]; then
-      RMDIR=1
-    fi
-  done
+	for dr in $HADOOP_TMP_DIR $NAMENODE_DIR $DATANODE_DIR
+	do
+		splitdir=$(echo $dr | tr "," "\n")
+		for idr in $splitdir
+		do
+		  ssh $slave "ls -ld $idr >/dev/null 2>&1"
+		  if [ $? -eq 0 ]; then
+			ssh $slave "rm -rf $idr" 
+		  fi
+		  ssh $slave "mkdir -p $idr"
+		done
+   done 
 done
-done
-
-if [ $RMDIR == 1 ]; then
-  for slave in `echo $SERVERS  |cut -d "=" -f2 | tr "%" "\n" | cut -d "," -f1 `
-  do
-  for dr in $HADOOP_TMP_DIR $NAMENODE_DIR $DATANODE_DIR
-  do
-    splitdir=$(echo $dr | tr "," "\n")
-    for idr in $splitdir
-    do
-      ssh $slave "ls -ld $idr >/dev/null 2>&1"
-      if [ $? -eq 0 ]; then
-        ssh $slave "rm -rf $idr" 
-      fi
-      ssh $slave "mkdir -p $idr"
-    done
-  done
-  done 
   echo "Finished creating HDFS directories" | tee -a $log
   echo 'Formatting NAMENODE'| tee -a $log
   $HADOOP_PREFIX/bin/hdfs namenode -format mycluster >> $log 2>&1
-else
-  #read -p "** NOTE ** HDFS directories existing. Do you wish to format ? [y/N] " prompt
-  hdfs_format=$1
-  if [[ $hdfs_format == "y" || $hdfs_format == "Y" || $hdfs_format == "yes" || $hdfs_format == "Yes" ]]; then
-    echo 'Formatting NAMENODE'| tee -a $log
-    $HADOOP_PREFIX/bin/hdfs namenode -format -force mycluster >> $log 2>&1
-  fi
-fi
 
-AN "mkdir -p '${HOME}'/hdfs_dir/spark-events" &>/dev/null
+  AN "mkdir -p '${HOME}'/hdfs_dir/spark-events" &>/dev/null
 
 echo -e | tee -a $log
 $CURDIR/hadoop/start-all.sh | tee -a $log
@@ -723,10 +703,10 @@ echo -e
 
 #read -p "Do you wish to run above command ? [y/N] " prompt
 
-spark_test=$2
+spark_test=$1
 if [[ $spark_test == "y" || $spark_test == "Y" || $spark_test == "yes" || $spark_test == "Yes" ]]
 then
-  ${SPARK_HOME}/bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn-client --driver-memory 1024M --num-executors 2 --executor-memory 1g  --executor-cores 1 ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.0.1.jar 10 &>> $log
+  ${SPARK_HOME}/bin/spark-submit --class org.apache.spark.examples.SparkPi --master yarn-client --driver-memory 1024M --num-executors 2 --executor-memory 1g  --executor-cores 1 ${SPARK_HOME}/examples/jars/spark-examples_2.11-*-SNAPSHOT.jar 10 &>> $log
   
   echo -e | tee -a $log
   echo "---------------------------------------------" | tee -a $log	

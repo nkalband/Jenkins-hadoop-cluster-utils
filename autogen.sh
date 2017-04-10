@@ -4,7 +4,7 @@
 # Creating new config
 echo -e '# Default hdfs configuration properties' > config
 echo -e 'HADOOP_TMP_DIR='${HOME}'/hdfs_dir/app-hadoop' >> config 
-echo -e 'REPLICATION_VALUE=3' >> config
+#echo -e 'REPLICATION_VALUE=3' >> config
 echo -e 'NAMENODE_DIR='${HOME}'/hdfs_dir/hdfs-meta' >> config
 echo -e 'DATANODE_DIR='${HOME}'/hdfs_dir/hdfs-data' >> config
 
@@ -35,29 +35,47 @@ fi
 ((j=j+1))
 done
 
+if [ $j -eq 1 ]
+then
+	echo -e 'REPLICATION_VALUE=1' >> config
+elif [ $j -eq 2 ]
+then
+	echo -e 'REPLICATION_VALUE=1' >> config
+elif [ $j -eq 3 ]
+then
+	echo -e 'REPLICATION_VALUE=2' >> config
+else 
+	echo -e 'REPLICATION_VALUE=3' >> config
+fi
+
 echo -en 'SLAVES='$SLAVE'\n\n' >> config
 
 echo -en '#Node Manager properties (Default yarn cpu and memory value for all nodes)\n' >> config	 
 echo -en 'YARN_SCHEDULER_MIN_ALLOCATION_MB=128\n' >> config				 
 echo -en 'YARN_SCHEDULER_MIN_ALLOCATION_VCORES=1\n\n' >> config
 echo -e
-echo -en 'Spark version selected for setup : '$2''
+#echo -en 'Spark version selected for setup : '$2''
 #sparkver="2.0.1"
-sparkver=$2
-echo -en 'hadoop version selected for setup :'$3''	
+#sparkver=$2
+echo -en 'hadoop version selected for setup :'$2''	
 #hadoopver="2.7.1"
-hadoopver=$3
+hadoopver=$2
 
-echo -en '#Hadoop and Spark versions and setup zip download urls\n' >> config
+#echo -en '#Hadoop and Spark versions and setup zip download urls\n' >> config
+echo -en '#Hadoop versions and setup zip download urls\n' >> config
 echo -e
-echo -en 'sparkver='"$sparkver"'\n' >> config
+#echo -en 'sparkver='"$sparkver"'\n' >> config
 echo -en 'hadoopver='"$hadoopver"'\n\n' >> config
 
 HADOOP_URL="http://www-us.apache.org/dist/hadoop/common/hadoop-${hadoopver}/hadoop-${hadoopver}.tar.gz"
-SPARK_URL="http://www-us.apache.org/dist/spark/spark-${sparkver}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz"
-
-echo -en 'SPARK_URL='$SPARK_URL'\n' >> config
 echo -en 'HADOOP_URL='$HADOOP_URL'\n\n' >> config
+
+# SPARK_URL="http://www-us.apache.org/dist/spark/spark-${sparkver}/spark-${sparkver}-bin-hadoop${hadoopver:0:3}.tgz"
+#echo -en 'SPARK_URL='$SPARK_URL'\n' >> config
+
+#Spark file used for setup
+SPARK_FILE=`ls -ltr ${HOME}/spark-*-bin-hadoop-*.tgz | tail -1 | awk '{print $9}'` 2>>/dev/null
+echo 'spark file used for building spark cluster - '$SPARK_FILE'' >> config
 
 
 echo -en '# Default port values\n' >> config
@@ -98,8 +116,8 @@ else
 fi
 
 echo -e
-echo -e 'Please check configuration (config file) once before run (setup.sh file).'
-echo -e 'You can modify hadoop or spark versions in config file'
+#echo -e 'Please check configuration (config file) once before run (setup.sh file).'
+#echo -e 'You can modify hadoop or spark versions in config file'
 echo -e
 chmod +x config
 
